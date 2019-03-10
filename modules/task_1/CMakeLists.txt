@@ -1,6 +1,7 @@
 message(STATUS "Task 1")
 
-add_subdirectory(khomenko_a_shell_sort_w_simple_merge_omp)
-add_subdirectory(gladyshev_a_gauss_omp)
-add_subdirectory(zinoviev_v_shtrassen_mul_omp)
-add_subdirectory(yakovlev_d_shells_sort_with_divide_and_conquer)
+SUBDIRLIST(subdirs ${CMAKE_CURRENT_SOURCE_DIR})
+
+foreach(subd ${subdirs})
+  add_subdirectory(${subd})
+endforeach()
