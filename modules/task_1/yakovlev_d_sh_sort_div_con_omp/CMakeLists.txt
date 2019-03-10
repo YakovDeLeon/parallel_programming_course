@@ -1,4 +1,4 @@
-set(PROJECT_NAME "yakovlev_d_shells_sort_with_divide_and_conquer_omp")
+set(PROJECT_NAME "yakovlev_d_sh_sort_div_con_omp")
 
 if ( USE_OMP )
     project( ${PROJECT_NAME} )
