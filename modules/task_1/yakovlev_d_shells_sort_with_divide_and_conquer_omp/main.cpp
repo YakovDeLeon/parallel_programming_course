@@ -24,7 +24,7 @@ int main(int argc, char** argv) {
     using std::cout;
     using std::endl;
     using std::string;
-    int nSizeArr;
+    uint32_t nSizeArr;
 
     if (argc == 5) {
         nSizeArr = atoi(argv[1]);
@@ -50,14 +50,16 @@ int main(int argc, char** argv) {
     ShellsSort(pdCopyArr, nSizeArr);
 
     string sLess = "matching!";
-    for (size_t i = 0; i < nSizeArr; i++) {
+    for (uint32_t i = 0; i < nSizeArr; i++) {
         if (pdCopyArr[i] != pdResArr[i]) {
             sLess = "not matching!";
             break;
         }
     }
     cout << "Serial and parallel versions are " << sLess << endl;
-    delete[] pdArr, pdCopyArr, pdResArr;
+    delete[] pdArr;
+    delete[] pdCopyArr;
+    delete[] pdResArr;
     return 0;
 }
 
@@ -81,6 +83,30 @@ void ShowArray(Type* pdArray, uint32_t unSizeArr) {
     std::cout << std::endl;
 }
 
+template<typename T>
+uint32_t BinSearch(T *pArr, uint32_t l, uint32_t r, T x) {
+    if (l == r) {
+        return l;
+    }
+    if (l + 1 == r) {
+        if (x < pArr[l]) {
+            return l;
+        } else {
+            return r;
+        }
+    }
+    uint32_t m = (l + r) / 2;
+    if (x < pArr[m]) {
+        r = m;
+    } else {
+        if (x > pArr[m]) {
+            l = m;
+        } else {
+            return m;
+        }
+    }
+    return BinSearch(pArr, l, r, x);
+}
 
 template <typename BaseType>
 void ShellsSort(BaseType * pArr, uint32_t N) {
@@ -130,7 +156,6 @@ void Merge(T* pArr1, T* pArr2, T* pResArr, uint32_t unSize1, uint32_t unSize2) {
     }
 }
 
-
 template<typename T>
 void MergeArrays(T* pArr1, T* pArr2, uint32_t unSize1, uint32_t unSize2, T* pResArr) {
     uint32_t nMedIndex = BinSearch(pArr2, 0, unSize2, (pArr1[unSize1 / 2]));
@@ -146,34 +171,9 @@ void MergeArrays(T* pArr1, T* pArr2, uint32_t unSize1, uint32_t unSize2, T* pRes
     std::copy(pTmp1, pTmp1 + nTmp1Size, pResArr);
     std::copy(pTmp2, pTmp2 + nTmp2Size, pResArr + nTmp1Size);
 
-    delete[] pTmp1, pTmp2;
+    delete[] pTmp1;
+    delete[] pTmp2;
 }
-
-template<typename T>
-uint32_t BinSearch(T *pArr, uint32_t l, uint32_t r, T x) {
-    if (l == r) {
-        return l;
-    }
-    if (l + 1 == r) {
-        if (x < pArr[l]) {
-            return l;
-        } else {
-            return r;
-        }
-    }
-    uint32_t m = (l + r) / 2;
-    if (x < pArr[m]) {
-        r = m;
-    } else {
-        if (x > pArr[m]) {
-            l = m;
-        } else {
-            return m;
-        }
-    }
-    return BinSearch(pArr, l, r, x);
-}
-
 
 template <typename Type>
 void ShellMerge(const Type *pArr, Type *pResArr, uint32_t nSizeArr) {
@@ -192,5 +192,6 @@ void ShellMerge(const Type *pArr, Type *pResArr, uint32_t nSizeArr) {
     ShellsSort(pTmpArr2, nTmpArr2Size);
 
     MergeArrays(pTmpArr1, pTmpArr2, nTmpArr1Size, nTmpArr2Size, pResArr);
-    delete[] pTmpArr1, pTmpArr2;
+    delete[] pTmpArr1;
+    delete[] pTmpArr2;
 }
