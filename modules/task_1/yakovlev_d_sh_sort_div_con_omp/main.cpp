@@ -9,7 +9,7 @@
 #include <algorithm>
 
 template<typename Type>
-void FillArray(Type* pd2dArray, uint32_t unSizeArr, Type Begin, Type End);
+void FillArray(Type* pd2dArray, uint32_t unSizeArr, int Begin, int nEnd);
 
 template<typename Type>
 void ShowArray(Type* pdArray, uint32_t unSizeArr);
@@ -26,7 +26,7 @@ int main(int argc, char** argv) {
     using std::string;
     uint32_t nSizeArr;
 
-    if (argc == 5) {
+    if (argc == 4) {
         nSizeArr = atoi(argv[1]);
     } else {
         nSizeArr = 10;
@@ -36,10 +36,10 @@ int main(int argc, char** argv) {
     double* pdCopyArr = new double[nSizeArr] {0};
     double* pdResArr = new double[nSizeArr] {0};
 
-    if (argc == 5) {
-        FillArray(pdArr, nSizeArr, atof(argv[2]), atof(argv[3]));
+    if (argc == 4) {
+        FillArray(pdArr, nSizeArr, atoi(argv[2]), atoi(argv[3]));
     } else {
-        FillArray(pdArr, nSizeArr, 0.0, 10.0);
+        FillArray(pdArr, nSizeArr, 0, 10);
     }
 
     std::copy(pdArr, pdArr + nSizeArr, pdCopyArr);
@@ -64,11 +64,11 @@ int main(int argc, char** argv) {
 }
 
 template<typename Type>
-void FillArray(Type* pArr, uint32_t unSizeArr, Type Begin, Type End) {
+void FillArray(Type* pArr, uint32_t unSizeArr, int32_t nBegin, int32_t nEnd) {
     std::random_device random_device;
     std::mt19937 generator(random_device());
 
-    std::uniform_int_distribution<> distribution(Begin, End);
+    std::uniform_int_distribution<int32_t> distribution(nBegin, nEnd);
 
     for (uint32_t i = 0; i < unSizeArr; ++i) {
         pArr[i] = distribution(generator);
