@@ -3,13 +3,13 @@
 #include <iostream>
 #include <vector>
 #include <random>
-
+#include <algorithm>
 
 struct ccsMatrix {
     std::vector<double> value;
     std::vector<size_t> row;
     std::vector<size_t> indexCol;
-    ccsMatrix(int N, int countNZ);
+    ccsMatrix(size_t N, size_t countNZ);
     explicit ccsMatrix(std::vector<std::vector<double>>);
     ccsMatrix() {}
     bool operator==(const ccsMatrix& B);
@@ -19,7 +19,7 @@ bool ccsMatrix::operator==(const ccsMatrix& B) {
     return (value == B.value) && (row == B.row) && (indexCol == B.indexCol);
 }
 
-ccsMatrix::ccsMatrix(int N, int countNZ) {
+ccsMatrix::ccsMatrix(size_t N, size_t countNZ) {
     value.resize(countNZ);
     row.resize(countNZ);
     indexCol.resize(N + 1);
@@ -49,7 +49,7 @@ std::vector<std::vector<double>> generateMatrix(size_t N) {
         std::vector<double> row;
         for (size_t j = 0; j < N; ++j) {
             double v = distribution(generator);
-            if (v > 3.5) {
+            if (v > 2.5) {
                 row.push_back(0);
             } else {
                 row.push_back(v);
@@ -59,6 +59,7 @@ std::vector<std::vector<double>> generateMatrix(size_t N) {
     }
     return matrix;
 }
+
 
 ccsMatrix transpon(const ccsMatrix& A) {
     ccsMatrix AT(A.indexCol.size() - 1, A.value.size());
@@ -82,6 +83,7 @@ ccsMatrix transpon(const ccsMatrix& A) {
     *(AT.indexCol.end() - 1) = *(A.indexCol.end() - 1);
     return AT;
 }
+
 void mulccsMatrix(const ccsMatrix& A, const ccsMatrix& B, ccsMatrix* resultC) {
     double t1 = omp_get_wtime();
     ccsMatrix AT = transpon(A);
@@ -111,6 +113,66 @@ void mulccsMatrix(const ccsMatrix& A, const ccsMatrix& B, ccsMatrix* resultC) {
         resultC->indexCol[j + 1] += resultC->indexCol[j];
     }
 }
+void mulccsMatrixParallelVersion(const ccsMatrix& A,
+                                      const ccsMatrix& B,
+                                      ccsMatrix* C) {
+    size_t size = A.indexCol.size() - 1;
+    std::vector< std::vector<double>> values(size);
+    std::vector<std::vector<size_t>> row(size);
+    std::vector<size_t> index_col(size + 1);
+
+    double t1 = omp_get_wtime();
+    ccsMatrix AT = transpon(A);
+    double t2 = omp_get_wtime();
+    std::cout << " time transpose : " << t2 - t1 << std::endl;
+    int m = static_cast<int>(B.indexCol.size());
+    size_t n = AT.indexCol.size();
+    size_t i = 0, x = 0, y = 0, l = 0, k = 0;
+    int j = 0;
+    #pragma omp parallel for private(i, x, y, l, k)
+    for (j = 0; j < m - 1; ++j) {
+        for (i = 0; i < n - 1; ++i) {
+            double sum = 0;
+            x = AT.indexCol[i + 1], y = B.indexCol[j + 1];
+            for (k = AT.indexCol[i]; k < x; ++k) {
+                for (l = B.indexCol[j]; l < y; ++l) {
+                    if (AT.row[k] == B.row[l]) {
+                        sum += AT.value[k] * B.value[l];
+                        break;
+                    }
+                }
+            }
+            if (sum != 0) {
+                values[j].push_back(sum);
+                row[j].push_back(i);
+                index_col[j]++;
+            }
+        }
+    }
+    size_t NZ = 0;
+    for (size_t i = 0; i < size; ++i) {
+        size_t p = index_col[i];
+        index_col[i] = NZ;
+        NZ += p;
+    }
+    C->value.resize(NZ);
+    C->row.resize(NZ);
+    C->indexCol.resize(size + 1);
+    std::vector<std::vector<double>>::iterator itv = values.begin();
+    std::vector<std::vector<size_t>>::iterator itr = row.begin();
+    std::vector<double>::iterator itCv = C->value.begin();
+    std::vector<size_t>::iterator itCr = C->row.begin();
+    size_t count;
+    for ( ; itv != values.end(); ++itv, ++itr) {
+        count = (*itr).size();
+        std::copy(itv->begin(), itv->end(), itCv);
+        std::copy(itr->begin(), itr->end(), itCr);
+        itCr += count;
+        itCv += count;
+    }
+    index_col[size] = NZ;
+    std::copy(index_col.begin(), index_col.end(), C->indexCol.begin());
+}
 std::vector<std::vector<double>> mulMatrix(std::vector<std::vector<double>> A,
     std::vector<std::vector<double>> B) {
     size_t N = A.size();
@@ -127,6 +189,7 @@ std::vector<std::vector<double>> mulMatrix(std::vector<std::vector<double>> A,
 }
 
 int main(int argc, char** argv) {
+    omp_set_num_threads(4);
     size_t size = 50;
     if (argc == 2) {
         size = atoi(argv[1]);
@@ -144,14 +207,24 @@ int main(int argc, char** argv) {
     double t2 = omp_get_wtime();
     std::cout << " time A * B : " << t2 - t1 << std::endl;
 
-    ccsMatrix res_ccs(size, 0);
-    std::cout << " start ccsA * ccsB .." << std::endl;
+    ccsMatrix serial_C(size, 0);
+    std::cout << " start ccsA * ccsB (serial version) .." << std::endl;
     t1 = omp_get_wtime();
-    mulccsMatrix(ccsA, ccsB, &res_ccs);
+    mulccsMatrix(ccsA, ccsB, &serial_C);
     t2 = omp_get_wtime();
     std::cout << " time ccsA * ccsB : " << t2 - t1 << std::endl;
-    ccsMatrix ccsCtrue(C);
-    std::cout << (ccsCtrue == res_ccs) << std::endl;
 
+    std::cout << " start ccsA * ccsB (parallel version) .." << std::endl;
+    t1 = omp_get_wtime();
+    ccsMatrix parallel_C(size, 0);
+    mulccsMatrixParallelVersion(ccsA, ccsB, &parallel_C);
+    t2 = omp_get_wtime();
+    std::cout << " time parallel ccsA * ccsB : " << t2 - t1 << std::endl;
+
+    std::cout << " NZ ccsA :" << ccsA.value.size() << std::endl;
+    std::cout << " NZ ccsB :" << ccsB.value.size() << std::endl;
+    std::cout << " NZ ccsC :" << parallel_C.value.size() << std::endl;
+    ccsMatrix ccsCtrue(C);
+    std::cout << (ccsCtrue == parallel_C) << std::endl;
     return EXIT_SUCCESS;
 }
