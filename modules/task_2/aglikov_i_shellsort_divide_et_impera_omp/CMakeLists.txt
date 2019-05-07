@@ -1,4 +1,4 @@
-set(PROJECT_NAME "ponomarev_a_linear_filter_omp")
+set(PROJECT_NAME "aglikov_i_shellsort_divide_et_impera_omp")
 
 if ( USE_OMP )
     project( ${PROJECT_NAME} )

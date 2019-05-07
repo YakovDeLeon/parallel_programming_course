@@ -1,4 +1,4 @@
-set(PROJECT_NAME "ponomarev_a_linear_filter_omp")
+set(PROJECT_NAME "evdokimova_j_gradient_task_2_omp")
 
 if ( USE_OMP )
     project( ${PROJECT_NAME} )
